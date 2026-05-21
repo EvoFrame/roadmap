@@ -65,7 +65,8 @@ documented in the service's own spec file.
 │       ├── db.compose.yml       # PostgreSQL (profiles: services, ui, monitoring)
 │       └── redis.compose.yml    # Redis (profiles: services, ui, monitoring)
 ├── compose.yml                  # Root: Docker Compose include directives
-├── .env                         # Credentials — gitignored
+├── .env                         # Container-ready values (service hostnames) — gitignored
+├── .env.local                   # Local cmd overrides (localhost values) — gitignored
 ├── devbox.json                  # Reproducible dev shell (Nix-backed)
 ├── .envrc                       # direnv — auto-activates devbox env
 ├── .python-version              # Python pin for uv: "3.13"
@@ -142,7 +143,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", ".env.local"),  # .env.local overrides .env; latter wins
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # Identity
     SERVICE_NAME: str
@@ -168,6 +173,41 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+```
+
+### Environment file strategy
+
+Two files, both gitignored:
+
+| File | Purpose | Used by |
+|------|----------|---------|
+| `.env` | Base values with **Docker service hostnames** (`db`, `redis`, `auth-service`) | Container runs, `compose up` |
+| `.env.local` | Overrides for **local cmd dev** (`localhost`, `127.0.0.1`) | `task dev`, `uvicorn` directly |
+
+Pydantic loads both and the last file wins on conflicts. `.env.local` is never
+present inside the container image, so the container always falls back to `.env`.
+
+**`.env` (base — container-ready):**
+
+```dotenv
+DATABASE_URL=postgresql+asyncpg://postgres:secret@db:5432/mydb
+REDIS_URL=redis://redis:6379/0
+AUTH_SERVICE_URL=http://auth-service:8080
+```
+
+**`.env.local` (local cmd overrides):**
+
+```dotenv
+DATABASE_URL=postgresql+asyncpg://postgres:secret@localhost:5432/mydb
+REDIS_URL=redis://localhost:6379/0
+AUTH_SERVICE_URL=http://localhost:8090
+```
+
+Add both to `.gitignore`:
+
+```gitignore
+.env
+.env.local
 ```
 
 ---
@@ -865,11 +905,11 @@ quote-style = "double"
 Compose is split into three fragments under `.docker/compose/`, each with
 **profiles** mirroring the [dev-toolkit](https://github.com/cyboooooorg/dev-toolkit) pattern:
 
-| Profile | What it adds |
-|---|---|
-| `services` | Core service — always on |
-| `ui` | Admin UI (pgAdmin / RedisInsight) — opt-in |
-| `monitoring` | Metrics exporter — opt-in |
+| Profile      | What it adds                               |
+| ------------ | ------------------------------------------ |
+| `services`   | Core service — always on                   |
+| `ui`         | Admin UI (pgAdmin / RedisInsight) — opt-in |
+| `monitoring` | Metrics exporter — opt-in                  |
 
 The root `compose.yml` uses Docker Compose `include:` to pull all three fragments.
 All credentials come from `.env` — never hardcoded.
@@ -913,7 +953,7 @@ services:
       - app_net
       - evoframe-internal
     labels:
-      ofelia.enabled: "true"    # see plan/infra/ofelia.md
+      ofelia.enabled: "true" # see plan/infra/ofelia.md
     restart: unless-stopped
 
 networks:
@@ -938,9 +978,9 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-db
     env_file: .env
     environment:
-      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -962,7 +1002,7 @@ services:
     ports:
       - "127.0.0.1:${PGADMIN_PORT}:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL:    ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     # No volume — ephemeral by design
     networks:
@@ -1028,8 +1068,8 @@ services:
     ports:
       - "127.0.0.1:${REDIS_UI_PORT}:5540"
     environment:
-      RI_REDIS_HOST:     redis
-      RI_REDIS_PORT:     6379
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: 6379
       RI_REDIS_PASSWORD: ${REDIS_PASSWORD}
     # No volume — ephemeral by design
     networks:
@@ -1042,7 +1082,7 @@ services:
       - monitoring
     container_name: ${COMPOSE_PROJECT_NAME}-redis-exporter
     environment:
-      REDIS_ADDR:     "redis:6379"
+      REDIS_ADDR: "redis:6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     # No volume — ephemeral by design
     networks:
@@ -1102,12 +1142,12 @@ The guard lives in each sub-file — every task is protected regardless of how i
 version: "3"
 
 includes:
-  dev:    ./taskfiles/dev.yml
-  test:   ./taskfiles/test.yml
-  db:     ./taskfiles/db.yml
+  dev: ./taskfiles/dev.yml
+  test: ./taskfiles/test.yml
+  db: ./taskfiles/db.yml
   docker: ./taskfiles/docker.yml
-  deps:   ./taskfiles/deps.yml
-  lint:   ./taskfiles/lint.yml
+  deps: ./taskfiles/deps.yml
+  lint: ./taskfiles/lint.yml
 
 tasks:
   dev:
@@ -1249,7 +1289,7 @@ version: "3"
 
 vars:
   COMPOSE_APP: .docker/compose/app.compose.yml
-  COMPOSE_DB:  .docker/compose/db.compose.yml
+  COMPOSE_DB: .docker/compose/db.compose.yml
   COMPOSE_RED: .docker/compose/redis.compose.yml
 
 tasks:
