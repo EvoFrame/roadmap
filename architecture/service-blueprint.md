@@ -138,7 +138,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.local"),  # .env.local overrides .env; latter wins
+        # Priority (highest → lowest):
+        #   1. Real environment variables  ← container injection lands here
+        #   2. .env.local                  ← local cmd overrides (localhost URLs)
+        #   3. .env                        ← base values (Docker service hostnames)
+        # Missing files are silently ignored — no file needed inside the container.
+        env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
