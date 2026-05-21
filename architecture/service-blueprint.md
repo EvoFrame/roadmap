@@ -12,9 +12,11 @@ documented in the service's own spec file.
 ├── .docker/
 │   ├── project/
 │   │   ├── Dockerfile
-│   │   └── entrypoint.sh
+│   │   ├── entrypoint.sh
+│   │   └── compose.yml          # App service definition
 │   └── dev-stacks/
-│       └── compose.yml          # PostgreSQL (+ MinIO for file-service)
+│       ├── postgresql/          # PostgreSQL dev stack
+│       └── redis/               # Redis dev stack
 ├── resources/
 │   ├── src/
 │   │   ├── config/
@@ -56,15 +58,7 @@ documented in the service's own spec file.
 │   │   ├── unit/
 │   │   └── integration/
 │   └── server.py                # App factory + lifespan
-├── .docker/
-│   ├── project/
-│   │   ├── Dockerfile
-│   │   └── entrypoint.sh
-│   └── compose/
-│       ├── app.compose.yml      # FastAPI service (profiles: services)
-│       ├── db.compose.yml       # PostgreSQL (profiles: services, ui, monitoring)
-│       └── redis.compose.yml    # Redis (profiles: services, ui, monitoring)
-├── compose.yml                  # Root: Docker Compose include directives
+├── compose.yml                  # Root: includes .docker/project/compose.yml
 ├── .env                         # Container-ready values (service hostnames) — gitignored
 ├── .env.local                   # Local cmd overrides (localhost values) — gitignored
 ├── devbox.json                  # Reproducible dev shell (Nix-backed)
@@ -179,10 +173,10 @@ settings = Settings()
 
 Two files, both gitignored:
 
-| File | Purpose | Used by |
-|------|----------|---------|
-| `.env` | Base values with **Docker service hostnames** (`db`, `redis`, `auth-service`) | Container runs, `compose up` |
-| `.env.local` | Overrides for **local cmd dev** (`localhost`, `127.0.0.1`) | `task dev`, `uvicorn` directly |
+| File         | Purpose                                                                       | Used by                        |
+| ------------ | ----------------------------------------------------------------------------- | ------------------------------ |
+| `.env`       | Base values with **Docker service hostnames** (`db`, `redis`, `auth-service`) | Container runs, `compose up`   |
+| `.env.local` | Overrides for **local cmd dev** (`localhost`, `127.0.0.1`)                    | `task dev`, `uvicorn` directly |
 
 Pydantic loads both and the last file wins on conflicts. `.env.local` is never
 present inside the container image, so the container always falls back to `.env`.
