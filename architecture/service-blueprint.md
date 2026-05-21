@@ -896,7 +896,7 @@ quote-style = "double"
 
 ## Compose files — dev stack
 
-Compose is split into three fragments under `.docker/compose/`, each with
+Compose is split into fragments under `.docker/`, each with
 **profiles** mirroring the [dev-toolkit](https://github.com/cyboooooorg/dev-toolkit) pattern:
 
 | Profile      | What it adds                               |
@@ -916,12 +916,12 @@ All credentials come from `.env` — never hardcoded.
 # Opt-in profiles: --profile ui   --profile monitoring
 
 include:
-  - path: .docker/compose/app.compose.yml
-  - path: .docker/compose/db.compose.yml
-  - path: .docker/compose/redis.compose.yml
+  - path: .docker/project/compose.yml
+  - path: .docker/dev-stacks/postgresql/compose.yml
+  - path: .docker/dev-stacks/redis/compose.yml
 ```
 
-### `.docker/compose/app.compose.yml`
+### `.docker/project/compose.yml`
 
 ```yaml
 # FastAPI application service
@@ -958,7 +958,7 @@ networks:
     external: true
 ```
 
-### `.docker/compose/db.compose.yml`
+### `.docker/dev-stacks/postgresql/compose.yml`
 
 ```yaml
 # PostgreSQL — one isolated DB per service
@@ -1027,7 +1027,7 @@ networks:
     external: true
 ```
 
-### `.docker/compose/redis.compose.yml`
+### `.docker/dev-stacks/redis/compose.yml`
 
 ```yaml
 # Redis — shared event bus + cache (per-service dev instance)
@@ -1282,9 +1282,9 @@ tasks:
 version: "3"
 
 vars:
-  COMPOSE_APP: .docker/compose/app.compose.yml
-  COMPOSE_DB: .docker/compose/db.compose.yml
-  COMPOSE_RED: .docker/compose/redis.compose.yml
+  COMPOSE_APP: .docker/project/compose.yml
+  COMPOSE_DB: .docker/dev-stacks/postgresql/compose.yml
+  COMPOSE_RED: .docker/dev-stacks/redis/compose.yml
 
 tasks:
   _guard:
