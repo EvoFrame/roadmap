@@ -70,3 +70,64 @@ service_clients
 ```
 
 See [`../architecture/service-auth.md`](../architecture/service-auth.md) for the full M2M token flow.
+
+## Environment Variables
+
+See [`../architecture/service-blueprint.md`](../architecture/service-blueprint.md) for the full env file strategy.
+
+**`.env`:**
+
+```dotenv
+# ── Identity ──────────────────────────────────────────────────────────────────
+SERVICE_NAME=auth-service
+SERVICE_VERSION=0.1.0
+SERVICE_ID=auth-service
+SERVICE_SECRET=supersecret
+
+# ── Database ──────────────────────────────────────────────────────────────────
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=auth_service
+DB_PORT=5432
+DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+REDIS_PASSWORD=redis
+REDIS_PORT=6379
+REDIS_URL=redis://default:${REDIS_PASSWORD}@redis:6379/0
+
+# ── JWT / Keys ────────────────────────────────────────────────────────────────
+# auth-service is the ONLY service that holds the private key
+RS256_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+RS256_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+ACCESS_TOKEN_TTL=900        # 15 min — user tokens
+SERVICE_TOKEN_TTL=300       # 5 min  — M2M tokens
+REFRESH_TOKEN_TTL=2592000   # 30 days
+
+# ── Password hashing ──────────────────────────────────────────────────────────
+ARGON2_TIME_COST=2
+ARGON2_MEMORY_COST=65536
+ARGON2_PARALLELISM=2
+
+# ── Runtime ───────────────────────────────────────────────────────────────────
+APP_ENV=development
+DEBUG=false
+LOG_LEVEL=INFO
+WORKERS=4
+
+# ── Dev UI ────────────────────────────────────────────────────────────────────
+PGADMIN_PORT=5050
+PGADMIN_EMAIL=admin@local.dev
+PGADMIN_PASSWORD=admin
+REDIS_UI_PORT=5540
+
+# ── Compose ───────────────────────────────────────────────────────────────────
+COMPOSE_PROJECT_NAME=auth-service
+```
+
+**`.env.local`** (app runs on host, dev-stack containers mapped to localhost):
+
+```dotenv
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/auth_service
+REDIS_URL=redis://default:redis@localhost:6379/0
+```

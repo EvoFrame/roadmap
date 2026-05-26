@@ -158,7 +158,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str        # postgresql+asyncpg://...
 
     # Redis
-    REDIS_URL: str           # redis://redis:6379/0
+    REDIS_URL: str           # redis://default:<password>@redis:6379/0
 
     # Auth
     AUTH_SERVICE_URL: str    # http://auth-service:8080
@@ -189,17 +189,52 @@ present inside the container image, so the container always falls back to `.env`
 **`.env` (base — container-ready):**
 
 ```dotenv
-DATABASE_URL=postgresql+asyncpg://postgres:secret@db:5432/mydb
-REDIS_URL=redis://redis:6379/0
+# ── Identity ────────────────────────────────────────────────────────────────
+SERVICE_NAME=my-service
+SERVICE_VERSION=0.1.0
+SERVICE_ID=my-service
+SERVICE_SECRET=supersecret
+
+# ── Database ─────────────────────────────────────────────────────────────────
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=my_service
+DB_PORT=5432
+DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+
+# ── Redis ────────────────────────────────────────────────────────────────────
+REDIS_PASSWORD=redis
+REDIS_PORT=6379
+REDIS_URL=redis://default:${REDIS_PASSWORD}@redis:6379/0
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
 AUTH_SERVICE_URL=http://auth-service:8080
+RS256_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+
+# ── Runtime ──────────────────────────────────────────────────────────────────
+APP_ENV=development
+DEBUG=false
+LOG_LEVEL=INFO
+WORKERS=4
+
+# ── Dev UI ───────────────────────────────────────────────────────────────────
+PGADMIN_PORT=5050
+PGADMIN_EMAIL=admin@local.dev
+PGADMIN_PASSWORD=admin
+REDIS_UI_PORT=5540
+
+# ── Compose ──────────────────────────────────────────────────────────────────
+COMPOSE_PROJECT_NAME=my-service
 ```
 
-**`.env.local` (local cmd overrides):**
+**`.env.local` (local cmd overrides — only what differs from `.env`):**
 
 ```dotenv
-DATABASE_URL=postgresql+asyncpg://postgres:secret@localhost:5432/mydb
-REDIS_URL=redis://localhost:6379/0
-AUTH_SERVICE_URL=http://localhost:8090
+# Overrides service hostnames with localhost so the app running on the host
+# can reach the dev-stack containers (which map ports to 127.0.0.1).
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/my_service
+REDIS_URL=redis://default:redis@localhost:6379/0
+AUTH_SERVICE_URL=http://localhost:8080
 ```
 
 Add both to `.gitignore`:
