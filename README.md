@@ -16,6 +16,7 @@
 | File storage         | Local filesystem (dev) / S3-compatible MinIO or AWS S3 (prod)              |
 | Payments             | Stripe                                                                     |
 | Auth tokens          | RS256 JWT (asymmetric) — issued by `auth-service`                          |
+| Authorization        | RBAC (role/permission assignment) + ABAC (policy evaluation via `auth-service`) |
 | Observability        | Prometheus + Grafana + Promtail + Loki (shared stack)                      |
 | Scheduled jobs       | [Ofelia](infra/ofelia.md) — Docker-native cron scheduler (label-driven) |
 
@@ -35,16 +36,16 @@
 
 ### Services
 
-| Service                                                  | Phase | Role                                                          |
-| -------------------------------------------------------- | ----- | ------------------------------------------------------------- |
-| [auth-service](services/auth-service.md)                 | 1     | JWT issuance · RBAC · MFA · OAuth2 · M2M tokens               |
-| [api-gateway](services/api-gateway.md)                   | 2     | Single entry point · JWT validation · routing · rate limiting |
-| [user-service](services/user-service.md)                 | 3     | User profiles & preferences                                   |
-| [team-service](services/team-service.md)                 | 4     | Teams · memberships · invitations                             |
-| [billing-service](services/billing-service.md)           | 5     | Stripe subscriptions & invoices                               |
-| [notification-service](services/notification-service.md) | 6     | Email + in-app notifications                                  |
-| [file-service](services/file-service.md)                 | 7     | File upload · storage · secure download                       |
-| [audit-service](services/audit-service.md)               | 8     | Immutable security & compliance log                           |
+| Service                                                  | Phase | Status             | Role                                                          |
+| -------------------------------------------------------- | ----- | ------------------ | ------------------------------------------------------------- |
+| [auth-service](services/auth-service.md)                 | 1     | 🔄 Near Complete   | JWT issuance · RBAC · ABAC · MFA · OAuth2 · M2M tokens        |
+| [api-gateway](services/api-gateway.md)                   | 2     | 📋 Next            | Single entry point · JWT validation · routing · rate limiting |
+| [user-service](services/user-service.md)                 | 3     | 📋 Planned         | User profiles & preferences                                   |
+| [team-service](services/team-service.md)                 | 4     | 📋 Planned         | Teams · memberships · invitations                             |
+| [billing-service](services/billing-service.md)           | 5     | 📋 Planned         | Stripe subscriptions & invoices                               |
+| [notification-service](services/notification-service.md) | 6     | 📋 Planned         | Email + in-app notifications                                  |
+| [file-service](services/file-service.md)                 | 7     | 📋 Planned         | File upload · storage · secure download                       |
+| [audit-service](services/audit-service.md)               | 8     | 📋 Planned         | Immutable security & compliance log                           |
 
 ### Infrastructure
 
@@ -62,8 +63,8 @@
 
 ```
 Phase 0 ── shared infra          (Redis · Ofelia · observability stack)
-Phase 1 ── auth-service          (JWT · RBAC · MFA · OAuth2 · M2M tokens)
-Phase 2 ── api-gateway           (routing · JWT introspection · rate limiting)
+Phase 1 ── auth-service          (JWT · RBAC · ABAC · MFA · OAuth2 · M2M tokens)  🔄 Near Complete
+Phase 2 ── api-gateway           (routing · JWT introspection · rate limiting)      ← CURRENT FOCUS
 Phase 3 ── user-service          (profiles) + Redis Streams bus setup
 Phase 4 ── team-service          (teams · memberships · invites)
 Phase 5 ── billing-service       (Stripe subscriptions + webhooks)
